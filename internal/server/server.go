@@ -10,7 +10,7 @@ import (
 
 type Server struct {
 	cfg    *config.Config
-	router *chi.Mux
+	Router *chi.Mux
 }
 
 func New(cfg *config.Config) *Server {
@@ -18,12 +18,12 @@ func New(cfg *config.Config) *Server {
 	r := chi.NewRouter()
 	return &Server{
 		cfg:    cfg,
-		router: r,
+		Router: r,
 	}
 }
 
 func (s *Server) Start() error {
 	// Запускает HTTP сервер на заданном порту
-	s.router.Handle("/*", handlers.StaticHandler(s.cfg))
-	return http.ListenAndServe(":"+s.cfg.Port, s.router)
+	s.Router.Handle("/*", handlers.StaticHandler(s.cfg))
+	return http.ListenAndServe(":"+s.cfg.Port, s.Router)
 }

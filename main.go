@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go_final_project/internal/config"
 	"go_final_project/internal/db"
+	"go_final_project/internal/handlers"
 	"go_final_project/internal/server"
 	"log"
 )
@@ -23,6 +24,7 @@ func main() {
 		}
 	}()
 	s := server.New(cfg)
+	handlers.Init(s.Router, database)
 	fmt.Println("сервер запущен на порту:", cfg.Port)
 	log.Fatal(s.Start())
 }

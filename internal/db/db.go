@@ -66,3 +66,11 @@ func initSchema(db *sql.DB, schemaPath string) error {
 	}
 	return nil
 }
+
+func AddTask(date, title, comment, repeat string, db *sql.DB) (sql.Result, error) {
+	return db.Exec("INSERT INTO scheduler (date, title, comment, repeat) VALUES (:date, :title, :comment, :repeat)",
+		sql.Named("date", date),
+		sql.Named("title", title),
+		sql.Named("comment", comment),
+		sql.Named("repeat", repeat))
+}
