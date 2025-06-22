@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-const dateFormat = "20060102"
-
 func AfterNow(now time.Time, date time.Time) bool {
 	return date.After(now)
 }
@@ -39,7 +37,7 @@ func DayRule(now time.Time, start time.Time, rule string) (string, error) {
 		}
 		start = date
 	}
-	return date.Format(dateFormat), nil
+	return date.Format(DateFormat), nil
 }
 
 func WeekRule(now time.Time, start time.Time, rule string) (string, error) {
@@ -75,7 +73,7 @@ func WeekRule(now time.Time, start time.Time, rule string) (string, error) {
 
 	date = now.AddDate(0, 0, minDays)
 
-	return date.Format(dateFormat), nil
+	return date.Format(DateFormat), nil
 }
 
 func weekdayToInt(w time.Weekday) int {
@@ -217,7 +215,7 @@ func YearRule(now time.Time, start time.Time, rule string) (string, error) {
 		}
 		start = date
 	}
-	return date.Format(dateFormat), nil
+	return date.Format(DateFormat), nil
 }
 
 func NextDate(now time.Time, dstart string, repeat string) (string, error) {
@@ -239,7 +237,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		'y' в случае правила "год"`)
 	}
 
-	start, err := time.Parse(dateFormat, dstart)
+	start, err := time.Parse(DateFormat, dstart)
 	if err != nil {
 		return "", errors.New("некорректный ввод даты. Введите в формате 'YYYYMMDD'")
 	}

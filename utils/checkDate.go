@@ -4,8 +4,11 @@ import (
 	"time"
 )
 
+const DateFormat = "20060102"
+const DateSearchFormat = "02.01.2006"
+
 func CheckDate(date string) (time.Time, bool) {
-	d, err := time.Parse(dateFormat, date)
+	d, err := time.Parse(DateFormat, date)
 	if err != nil {
 		return time.Time{}, false
 	}

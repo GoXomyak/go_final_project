@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"go_final_project/internal/db"
 	"go_final_project/internal/dto"
@@ -14,12 +15,12 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-const dateFormat = "20060102"
-
 func Init(r chi.Router, db *sql.DB) {
 	r.Get("/api/nextdate", nextDayHandler)
 	r.Post("/api/task", addTaskHandler(db))
-	r.Get("/api/tasks", getTaskHandler(db))
+	r.Get("/api/tasks", getTasksHandler(db))
+	r.Get("/api/task", getTaskHandler(db))
+	r.Put("/api/task", updateTaskHandler(db))
 }
 
 func nextDayHandler(w http.ResponseWriter, r *http.Request) {
@@ -27,7 +28,7 @@ func nextDayHandler(w http.ResponseWriter, r *http.Request) {
 	nowTemp := r.URL.Query().Get("now")
 	repeat := r.URL.Query().Get("repeat")
 
-	now, err := time.Parse(dateFormat, nowTemp)
+	now, err := time.Parse(utils.DateFormat, nowTemp)
 	if err != nil {
 		http.Error(w, "Неверный параметр now: "+err.Error(), http.StatusBadRequest)
 		return
@@ -78,13 +79,81 @@ func addTaskHandler(database *sql.DB) http.HandlerFunc {
 	}
 }
 
-func getTaskHandler(database *sql.DB) http.HandlerFunc {
+func getTasksHandler(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tasks, err := db.GetTasks(database, 20)
+		search := r.URL.Query().Get("search")
+		tasks, err := db.GetTasks(database, search, 20)
 		if err != nil {
 			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
 			return
 		}
 		utils.RespondeJson(w, http.StatusOK, map[string]any{"tasks": tasks})
+	}
+}
+
+func updateTaskHandler(database *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var taskReq dto.Task
+		err := json.NewDecoder(r.Body).Decode(&taskReq)
+		if err != nil {
+			utils.RespondeJsonError(w, http.StatusBadRequest, err)
+			return
+		}
+		err = db.TaskExists(database, taskReq.ID)
+		if err != nil {
+			utils.RespondeJsonError(w, http.StatusBadRequest, err)
+			return
+		}
+		req := dto.TaskRequest{
+			Date:    taskReq.Date,
+			Title:   taskReq.Title,
+			Comment: taskReq.Comment,
+			Repeat:  taskReq.Repeat,
+		}
+		taskValid, err := validators.TaskValidator(req)
+		if err != nil {
+			utils.RespondeJsonError(w, http.StatusBadRequest, err)
+			return
+		}
+		task := dto.Task{
+			ID:      taskReq.ID,
+			Date:    taskValid.Date,
+			Title:   taskValid.Title,
+			Comment: taskValid.Comment,
+			Repeat:  taskValid.Repeat,
+		}
+		err = db.UpdateTask(database, task)
+		if err != nil {
+			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			return
+		}
+		utils.RespondeJson(w, http.StatusOK, new(dto.Task))
+	}
+
+}
+
+func getTaskHandler(database *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			utils.RespondeJsonError(w, http.StatusBadRequest, "ID не указан")
+			return
+
+		}
+		err := db.TaskExists(database, id)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+				return
+			}
+			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			return
+		}
+		task, err := db.GetTask(database, id)
+		if err != nil {
+			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			return
+		}
+		utils.RespondeJson(w, http.StatusOK, task)
 	}
 }
