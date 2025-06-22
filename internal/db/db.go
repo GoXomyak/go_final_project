@@ -2,7 +2,9 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"go_final_project/internal/dto"
 	"os"
 	"path/filepath"
 
@@ -73,4 +75,30 @@ func AddTask(date, title, comment, repeat string, db *sql.DB) (sql.Result, error
 		sql.Named("title", title),
 		sql.Named("comment", comment),
 		sql.Named("repeat", repeat))
+}
+
+func GetTasks(db *sql.DB, limit int) ([]dto.Task, error) {
+	rows, err := db.Query(`SELECT id, date, title, comment, repeat FROM scheduler
+ORDER BY date
+LIMIT :limit`, sql.Named("limit", limit))
+	if err != nil {
+		return []dto.Task{}, errors.New("Ошибка получения задач из базы данных: " + err.Error())
+	}
+	defer func() {
+		if err = rows.Close(); err != nil {
+			fmt.Printf("Ошибка закрытия rows: %v", err)
+		}
+	}()
+	tasks := make([]dto.Task, 0)
+	for rows.Next() {
+		var task dto.Task
+		if err = rows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat); err != nil {
+			return []dto.Task{}, errors.New("Ошибка сканирования задачи: " + err.Error())
+		}
+		tasks = append(tasks, task)
+	}
+	if err = rows.Err(); err != nil {
+		return []dto.Task{}, errors.New("Ошибка сканирования задачи: " + err.Error())
+	}
+	return tasks, nil
 }

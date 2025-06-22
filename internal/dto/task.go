@@ -12,7 +12,7 @@ type TaskResponse struct {
 }
 
 type Task struct {
-	ID      int64  `gorm:"primaryKey" json:"id"`
+	ID      string `json:"id"`
 	Date    string `json:"date"`
 	Title   string `json:"title"`
 	Comment string `json:"comment"`

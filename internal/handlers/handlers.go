@@ -19,6 +19,7 @@ const dateFormat = "20060102"
 func Init(r chi.Router, db *sql.DB) {
 	r.Get("/api/nextdate", nextDayHandler)
 	r.Post("/api/task", addTaskHandler(db))
+	r.Get("/api/tasks", getTaskHandler(db))
 }
 
 func nextDayHandler(w http.ResponseWriter, r *http.Request) {
@@ -74,5 +75,16 @@ func addTaskHandler(database *sql.DB) http.HandlerFunc {
 			utils.RespondeJsonError(w, http.StatusBadRequest, "Ошибка получения id из бд: "+err.Error())
 		}
 		utils.RespondeJson(w, http.StatusOK, dto.TaskResponse{ID: id})
+	}
+}
+
+func getTaskHandler(database *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tasks, err := db.GetTasks(database, 20)
+		if err != nil {
+			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			return
+		}
+		utils.RespondeJson(w, http.StatusOK, map[string]any{"tasks": tasks})
 	}
 }
