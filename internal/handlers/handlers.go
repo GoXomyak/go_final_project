@@ -3,7 +3,6 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"go_final_project/internal/db"
 	"go_final_project/internal/dto"
@@ -21,6 +20,8 @@ func Init(r chi.Router, db *sql.DB) {
 	r.Get("/api/tasks", getTasksHandler(db))
 	r.Get("/api/task", getTaskHandler(db))
 	r.Put("/api/task", updateTaskHandler(db))
+	r.Post("/api/task/done", taskDoneHandler(db))
+	r.Delete("/api/task", deleteTaskHandler(db))
 }
 
 func nextDayHandler(w http.ResponseWriter, r *http.Request) {
@@ -134,26 +135,64 @@ func updateTaskHandler(database *sql.DB) http.HandlerFunc {
 
 func getTaskHandler(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := r.URL.Query().Get("id")
-		if id == "" {
-			utils.RespondeJsonError(w, http.StatusBadRequest, "ID не указан")
-			return
-
-		}
-		err := db.TaskExists(database, id)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				utils.RespondeJsonError(w, http.StatusInternalServerError, err)
-				return
-			}
-			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
-			return
-		}
-		task, err := db.GetTask(database, id)
+		task, err := db.GetTask(r, database)
 		if err != nil {
 			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
 			return
 		}
 		utils.RespondeJson(w, http.StatusOK, task)
+	}
+}
+
+func taskDoneHandler(database *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		task, err := db.GetTask(r, database)
+		if err != nil {
+			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if task.Repeat == "" {
+			err = db.DeleteTask(database, task.ID)
+			if err != nil {
+				utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+				return
+			}
+			utils.RespondeJson(w, http.StatusOK, dto.Empty{})
+			return
+		}
+		newDate, err := utils.NextDate(time.Now(), task.Date, task.Repeat)
+		if err != nil {
+			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			return
+		}
+		task = dto.Task{
+			ID:      task.ID,
+			Date:    newDate,
+			Title:   task.Title,
+			Comment: task.Comment,
+			Repeat:  task.Repeat,
+		}
+		err = db.UpdateTask(database, task)
+		if err != nil {
+			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			return
+		}
+		utils.RespondeJson(w, http.StatusOK, dto.Empty{})
+	}
+}
+
+func deleteTaskHandler(database *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		task, err := db.GetTask(r, database)
+		if err != nil {
+			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			return
+		}
+		err = db.DeleteTask(database, task.ID)
+		if err != nil {
+			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			return
+		}
+		utils.RespondeJson(w, http.StatusOK, dto.Empty{})
 	}
 }

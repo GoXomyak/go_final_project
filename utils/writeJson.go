@@ -19,8 +19,17 @@ func RespondeJson(w http.ResponseWriter, status int, data any) {
 func RespondeJsonError(w http.ResponseWriter, status int, err any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
+	var errStr string
+	switch e := err.(type) {
+	case error:
+		errStr = e.Error()
+	case string:
+		errStr = e
+	default:
+		errStr = fmt.Sprint(e)
+	}
 	errJson := json.NewEncoder(w).Encode(map[string]any{
-		"error": err,
+		"error": errStr,
 	})
 	if errJson != nil {
 		fmt.Println(errJson)

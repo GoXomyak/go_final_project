@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go_final_project/internal/dto"
 	"go_final_project/utils"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -147,13 +148,33 @@ WHERE id = :id`, sql.Named("id", task.ID), sql.Named("date", task.Date), sql.Nam
 	return nil
 }
 
-func GetTask(db *sql.DB, id string) (dto.Task, error) {
+func GetTask(r *http.Request, database *sql.DB) (dto.Task, error) {
 	var task dto.Task
-	row := db.QueryRow(`SELECT * FROM scheduler WHERE id = :id`, sql.Named("id", id))
-	err := row.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		return task, errors.New("ID не указан")
+
+	}
+	err := TaskExists(database, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return task, err
+		}
+		return task, err
+	}
+
+	row := database.QueryRow(`SELECT * FROM scheduler WHERE id = :id`, sql.Named("id", id))
+	err = row.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
 	if err != nil {
 		return dto.Task{}, errors.New("ошибка получения задачи из бд: " + err.Error())
 	}
 	return task, nil
+}
 
+func DeleteTask(db *sql.DB, id string) error {
+	_, err := db.Exec("DELETE FROM scheduler WHERE id = :id", sql.Named("id", id))
+	if err != nil {
+		return errors.New("Ошибка удаления задачи из бд: " + err.Error())
+	}
+	return nil
 }

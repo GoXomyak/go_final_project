@@ -18,3 +18,6 @@ type Task struct {
 	Comment string `json:"comment"`
 	Repeat  string `json:"repeat"`
 }
+
+type Empty struct {
+}
