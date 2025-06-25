@@ -4,24 +4,27 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"go_final_project/internal/config"
 	"go_final_project/internal/db"
 	"go_final_project/internal/dto"
 	"go_final_project/internal/validators"
 	"go_final_project/utils"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 )
 
-func Init(r chi.Router, db *sql.DB) {
+func Init(r chi.Router, db *sql.DB, cfg *config.Config) {
 	r.Get("/api/nextdate", nextDayHandler)
-	r.Post("/api/task", addTaskHandler(db))
-	r.Get("/api/tasks", getTasksHandler(db))
-	r.Get("/api/task", getTaskHandler(db))
-	r.Put("/api/task", updateTaskHandler(db))
-	r.Post("/api/task/done", taskDoneHandler(db))
-	r.Delete("/api/task", deleteTaskHandler(db))
+	r.Post("/api/task", auth(addTaskHandler(db), cfg))
+	r.Get("/api/tasks", auth(getTasksHandler(db), cfg))
+	r.Get("/api/task", auth(getTaskHandler(db), cfg))
+	r.Put("/api/task", auth(updateTaskHandler(db), cfg))
+	r.Post("/api/task/done", auth(taskDoneHandler(db), cfg))
+	r.Delete("/api/task", auth(deleteTaskHandler(db), cfg))
+	r.Post("/api/signin", authHandler(cfg))
 }
 
 func nextDayHandler(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +63,6 @@ func addTaskHandler(database *sql.DB) http.HandlerFunc {
 			utils.RespondeJsonError(w, http.StatusBadRequest, err)
 			return
 		}
-
 		task := dto.Task{
 			Date:    reqValid.Date,
 			Title:   reqValid.Title,
@@ -73,10 +75,13 @@ func addTaskHandler(database *sql.DB) http.HandlerFunc {
 			return
 		}
 		id, err := result.LastInsertId()
+		idStr := strconv.FormatInt(id, 10)
 		if err != nil {
 			utils.RespondeJsonError(w, http.StatusBadRequest, "Ошибка получения id из бд: "+err.Error())
+			return
 		}
-		utils.RespondeJson(w, http.StatusOK, dto.TaskResponse{ID: id})
+		fmt.Println(task)
+		utils.RespondeJson(w, http.StatusOK, dto.TaskResponse{ID: idStr})
 	}
 }
 

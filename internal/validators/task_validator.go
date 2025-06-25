@@ -11,7 +11,7 @@ import (
 const dateFormat = "20060102"
 
 func TaskValidator(req dto.TaskRequest) (dto.TaskRequest, error) {
-	now := time.Now().UTC().Format(dateFormat)
+	now := time.Now().Format(dateFormat)
 	var newDate string
 	var err error
 	if strings.TrimSpace(req.Date) == "" {

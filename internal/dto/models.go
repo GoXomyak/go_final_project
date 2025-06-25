@@ -1,5 +1,7 @@
 package dto
 
+import "github.com/golang-jwt/jwt/v5"
+
 type TaskRequest struct {
 	Date    string `json:"date"`
 	Title   string `json:"title"`
@@ -8,7 +10,7 @@ type TaskRequest struct {
 }
 
 type TaskResponse struct {
-	ID int64 `json:"id"`
+	ID string `json:"id"`
 }
 
 type Task struct {
@@ -20,4 +22,16 @@ type Task struct {
 }
 
 type Empty struct {
+}
+
+type Credentials struct {
+	Password string `json:"password"`
+}
+
+type Claims struct {
+	jwt.RegisteredClaims
+}
+
+type Token struct {
+	AccessToken string `json:"token"`
 }

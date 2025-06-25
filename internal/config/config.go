@@ -11,6 +11,8 @@ type Config struct {
 	WebDir     string
 	DBPath     string
 	SchemaPath string
+	Password   string
+	SecretJWT  string
 }
 
 func Load(path string) (*Config, error) {
@@ -28,6 +30,8 @@ func Load(path string) (*Config, error) {
 		WebDir:     os.Getenv("WEB_DIR"),
 		DBPath:     os.Getenv("TODO_DBFILE"),
 		SchemaPath: os.Getenv("TODO_SCHEMA_PATH"),
+		Password:   os.Getenv("TODO_PASSWORD"),
+		SecretJWT:  os.Getenv("TODO_SECRET_JWT"),
 	}
 	if cfg.Port == "" {
 		cfg.Port = "7540"
@@ -41,14 +45,9 @@ func Load(path string) (*Config, error) {
 	if cfg.SchemaPath == "" {
 		cfg.SchemaPath = "./internal/db/schema.sql"
 	}
+	if cfg.SecretJWT == "" {
+		cfg.SecretJWT = os.Getenv("lineForSignature")
+	}
 
 	return cfg, nil
-}
-
-func GetEnv(key string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		panic("Переменная окружения " + key + " не установлена")
-	}
-	return value
 }

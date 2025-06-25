@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"go_final_project/internal/config"
 	"go_final_project/internal/dto"
 	"go_final_project/utils"
 	"net/http"
@@ -38,8 +39,8 @@ func CheckAndCreate(dbPath string) error {
 	return nil
 }
 
-func Connect(dbPath string, schemaPath string) (*sql.DB, error) {
-	absPath, err := filepath.Abs(dbPath)
+func Connect(cfg *config.Config) (*sql.DB, error) {
+	absPath, err := filepath.Abs(cfg.DBPath)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +54,7 @@ func Connect(dbPath string, schemaPath string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	if err = initSchema(db, schemaPath); err != nil {
+	if err = initSchema(db, cfg.SchemaPath); err != nil {
 		return nil, err
 	}
 

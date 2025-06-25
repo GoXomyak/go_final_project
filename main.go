@@ -14,7 +14,7 @@ func main() {
 	if err != nil {
 		panic("Ошибка загрузки конфигурации: " + err.Error())
 	}
-	database, err := db.Connect(cfg.DBPath, cfg.SchemaPath)
+	database, err := db.Connect(cfg)
 	if err != nil {
 		panic("Невозможно создать подключение к бд: " + err.Error())
 	}
@@ -24,7 +24,7 @@ func main() {
 		}
 	}()
 	s := server.New(cfg)
-	handlers.Init(s.Router, database)
+	handlers.Init(s.Router, database, cfg)
 	fmt.Println("сервер запущен на порту:", cfg.Port)
 	log.Fatal(s.Start())
 }
