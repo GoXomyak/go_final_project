@@ -31,7 +31,7 @@ func Load(path string) (*Config, error) {
 		DBPath:     os.Getenv("TODO_DBFILE"),
 		SchemaPath: os.Getenv("TODO_SCHEMA_PATH"),
 		Password:   os.Getenv("TODO_PASSWORD"),
-		SecretJWT:  os.Getenv("TODO_SECRET_JWT"),
+		SecretJWT:  os.Getenv("TODO_JWT_SECRET"),
 	}
 	if cfg.Port == "" {
 		cfg.Port = "7540"
@@ -46,7 +46,7 @@ func Load(path string) (*Config, error) {
 		cfg.SchemaPath = "./internal/db/schema.sql"
 	}
 	if cfg.SecretJWT == "" {
-		cfg.SecretJWT = os.Getenv("lineForSignature")
+		cfg.SecretJWT = "lineForSignature"
 	}
 
 	return cfg, nil

@@ -79,7 +79,6 @@ func addTaskHandler(database *sql.DB) http.HandlerFunc {
 			utils.RespondeJsonError(w, http.StatusBadRequest, "Ошибка получения id из бд: "+err.Error())
 			return
 		}
-		fmt.Println(task)
 		utils.RespondeJson(w, http.StatusOK, dto.TaskResponse{ID: idStr})
 	}
 }

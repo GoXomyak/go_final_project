@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"go_final_project/internal/config"
 	"go_final_project/internal/dto"
 	"go_final_project/internal/utils"
@@ -42,7 +41,6 @@ func authHandler(cfg *config.Config) http.HandlerFunc {
 			utils.RespondeJsonError(w, http.StatusInternalServerError, errors.New("невозможно создать токен"))
 			return
 		}
-		fmt.Println(tokenString)
 		utils.RespondeJson(w, http.StatusOK, dto.Token{AccessToken: tokenString})
 	}
 }
