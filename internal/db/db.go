@@ -18,7 +18,7 @@ import (
 func CheckAndCreate(dbPath string) error {
 	dir := filepath.Dir(dbPath)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		createErr := os.Mkdir(dir, 0755)
+		createErr := os.MkdirAll(dir, 0755)
 		if createErr != nil {
 			return fmt.Errorf("Ошибка создания директоррии: %s\n", createErr)
 		}
@@ -40,21 +40,24 @@ func CheckAndCreate(dbPath string) error {
 }
 
 func Connect(cfg *config.Config) (*sql.DB, error) {
-	absPath, err := filepath.Abs(cfg.DBPath)
+	absDBPath, err := filepath.Abs(cfg.DBPath)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = CheckAndCreate(absPath); err != nil {
+	if err = CheckAndCreate(absDBPath); err != nil {
 		return nil, err
 	}
 
-	db, err := sql.Open("sqlite", absPath)
+	db, err := sql.Open("sqlite", absDBPath)
 	if err != nil {
 		return nil, err
 	}
-
-	if err = initSchema(db, cfg.SchemaPath); err != nil {
+	absSchemaPath, err := filepath.Abs(cfg.SchemaPath)
+	if err != nil {
+		return nil, err
+	}
+	if err = initSchema(db, absSchemaPath); err != nil {
 		return nil, err
 	}
 

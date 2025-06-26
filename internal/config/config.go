@@ -16,38 +16,33 @@ type Config struct {
 }
 
 func Load(path string) (*Config, error) {
-	// Здесь должна быть логика загрузки конфигурации из файла или переменных окружения
-	// Например, можно использовать os.Getenv для получения переменных окружения
 	if path == "" {
 		path = ".env"
 	}
-	err := godotenv.Load(path)
-	if err != nil {
-		return nil, err
+
+	if os.Getenv("RUNNING_IN_DOCKER") != "true" {
+		err := godotenv.Load(path)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	cfg := &Config{
-		Port:       os.Getenv("TODO_PORT"),
-		WebDir:     os.Getenv("WEB_DIR"),
-		DBPath:     os.Getenv("TODO_DBFILE"),
-		SchemaPath: os.Getenv("TODO_SCHEMA_PATH"),
-		Password:   os.Getenv("TODO_PASSWORD"),
-		SecretJWT:  os.Getenv("TODO_JWT_SECRET"),
-	}
-	if cfg.Port == "" {
-		cfg.Port = "7540"
-	}
-	if cfg.DBPath == "" {
-		cfg.DBPath = "./internal/data/scheduler.db"
-	}
-	if cfg.WebDir == "" {
-		cfg.WebDir = "./web"
-	}
-	if cfg.SchemaPath == "" {
-		cfg.SchemaPath = "./internal/db/schema.sql"
-	}
-	if cfg.SecretJWT == "" {
-		cfg.SecretJWT = "lineForSignature"
+		Port:       getEnv("TODO_PORT", "7540"),
+		WebDir:     getEnv("WEB_DIR", "./web"),
+		DBPath:     getEnv("TODO_DBFILE", "./internal/data/scheduler.db"),
+		SchemaPath: getEnv("TODO_SCHEMA_PATH", "./internal/db/schema.sql"),
+		Password:   getEnv("TODO_PASSWORD", ""),
+		SecretJWT:  getEnv("TODO_JWT_SECRET", "lineForSignature"),
 	}
 
 	return cfg, nil
+}
+
+func getEnv(key, fallback string) string {
+	val := os.Getenv(key)
+	if val == "" {
+		return fallback
+	}
+	return val
 }
