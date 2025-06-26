@@ -7,8 +7,7 @@ import (
 	"go_final_project/internal/config"
 	"go_final_project/internal/db"
 	"go_final_project/internal/dto"
-	"go_final_project/internal/validators"
-	"go_final_project/utils"
+	"go_final_project/internal/utils"
 	"net/http"
 	"strconv"
 	"time"
@@ -58,7 +57,7 @@ func addTaskHandler(database *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		reqValid, err := validators.TaskValidator(req)
+		reqValid, err := utils.TaskValidator(req)
 		if err != nil {
 			utils.RespondeJsonError(w, http.StatusBadRequest, err)
 			return
@@ -116,7 +115,7 @@ func updateTaskHandler(database *sql.DB) http.HandlerFunc {
 			Comment: taskReq.Comment,
 			Repeat:  taskReq.Repeat,
 		}
-		taskValid, err := validators.TaskValidator(req)
+		taskValid, err := utils.TaskValidator(req)
 		if err != nil {
 			utils.RespondeJsonError(w, http.StatusBadRequest, err)
 			return

@@ -1,31 +1,28 @@
-package validators
+package utils
 
 import (
 	"fmt"
 	"go_final_project/internal/dto"
-	"go_final_project/utils"
 	"strings"
 	"time"
 )
 
-const dateFormat = "20060102"
-
 func TaskValidator(req dto.TaskRequest) (dto.TaskRequest, error) {
-	now := time.Now().Format(dateFormat)
+	now := time.Now().Format(DateFormat)
 	var newDate string
 	var err error
 	if strings.TrimSpace(req.Date) == "" {
 		req.Date = now
 	}
-	if len(req.Date) != len(dateFormat) {
+	if len(req.Date) != len(DateFormat) {
 		return dto.TaskRequest{}, fmt.Errorf("неверный формат даты")
 	}
-	_, ok := utils.CheckDate(req.Date)
+	_, ok := CheckDate(req.Date)
 	if !ok {
 		return dto.TaskRequest{}, fmt.Errorf("некорректная дата")
 	}
 	if strings.TrimSpace(req.Repeat) != "" {
-		newDate, err = utils.NextDate(time.Now(), req.Date, req.Repeat)
+		newDate, err = NextDate(time.Now(), req.Date, req.Repeat)
 		if err != nil {
 			return dto.TaskRequest{}, err
 		}

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"go_final_project/internal/config"
 	"go_final_project/internal/dto"
-	"go_final_project/utils"
+	"go_final_project/internal/utils"
 	"net/http"
 	"os"
 	"path/filepath"
