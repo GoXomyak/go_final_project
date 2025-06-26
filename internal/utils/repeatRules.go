@@ -8,15 +8,23 @@ import (
 	"time"
 )
 
+// AfterNow определяет, находится ли переданная дата после указанного текущего времени (now).
+// Возвращает true, если дата находится в будущем относительно now.
 func AfterNow(now time.Time, date time.Time) bool {
 	return date.After(now)
 }
 
+// SplitRule разделяет переданную строку по запятым и пробелам,
+// возвращая срез полученных подстрок.
 func SplitRule(repeat string) []string {
 	repeat = strings.ReplaceAll(repeat, ",", " ")
 	return strings.Split(repeat, " ")
 }
 
+// DayRule вычисляет дату следующего повторения на основе предоставленного правила
+// ежедневного повторения и начальной даты.
+// Возвращает дату следующего повторения в формате "YYYYMMDD" или ошибку,
+// если входное правило некорректно.
 func DayRule(now time.Time, start time.Time, rule string) (string, error) {
 	var date time.Time
 	repeat := SplitRule(rule)
@@ -40,7 +48,10 @@ func DayRule(now time.Time, start time.Time, rule string) (string, error) {
 	return date.Format(DateFormat), nil
 }
 
-func WeekRule(now time.Time, start time.Time, rule string) (string, error) {
+// WeekRule вычисляет следующую дату на основе правила еженедельного повторения и текущей даты.
+// Принимает текущее время и строку правила в формате 'w число (число, ...)'.
+// Возвращает следующую дату в отформатированном виде или ошибку при неверных входных данных.
+func WeekRule(now time.Time, rule string) (string, error) {
 	var date time.Time
 	repeat := SplitRule(rule)
 	if len(repeat) < 2 {
@@ -76,6 +87,8 @@ func WeekRule(now time.Time, start time.Time, rule string) (string, error) {
 	return date.Format(DateFormat), nil
 }
 
+// weekdayToInt преобразует значение time.Weekday в целое число от 1 (понедельник) до 7 (воскресенье).
+// Воскресенье (0 в time.Weekday) преобразуется в 7.
 func weekdayToInt(w time.Weekday) int {
 	if w == 0 {
 		return 7 // воскресенье — 7
@@ -83,6 +96,9 @@ func weekdayToInt(w time.Weekday) int {
 	return int(w)
 }
 
+// MonthRule вычисляет следующую дату на основе указанного правила ежемесячного повторения
+// и начальной даты. Возвращает дату следующего повторения в формате "YYYYMMDD"
+// или ошибку, если правило некорректно.
 func MonthRule(now time.Time, start time.Time, rule string) (string, error) {
 	ruleFields := strings.Fields(rule)
 	if len(ruleFields) < 2 {
@@ -184,6 +200,9 @@ func MonthRule(now time.Time, start time.Time, rule string) (string, error) {
 	return earliest.Format("20060102"), nil
 }
 
+// resolveDay определяет корректный день в указанном месяце и году для заданного входного дня.
+// Возвращает вычисленный день и nil в случае успеха, или 0 и ошибку, если входной день некорректен.
+// День -1 означает последний день месяца, а -2 - предпоследний день месяца.
 func resolveDay(year int, month time.Month, day int) (int, error) {
 	last := time.Date(year, month+1, 0, 0, 0, 0, 0, time.UTC).Day()
 	switch day {
@@ -202,6 +221,9 @@ func resolveDay(year int, month time.Month, day int) (int, error) {
 	}
 }
 
+// YearRule вычисляет следующую дату повторения на основе правила ежегодного повторения
+// и начальной даты. Возвращает следующую дату в формате "YYYYMMDD" или ошибку,
+// если правило некорректно.
 func YearRule(now time.Time, start time.Time, rule string) (string, error) {
 	var date time.Time
 	repeat := SplitRule(rule)
@@ -218,6 +240,10 @@ func YearRule(now time.Time, start time.Time, rule string) (string, error) {
 	return date.Format(DateFormat), nil
 }
 
+// NextDate вычисляет дату следующего повторения на основе текущей даты, начальной даты
+// и правила повторения. Правило должно указывать частоту ('d' для дней, 'w' для недель,
+// 'm' для месяцев, 'y' для лет). Возвращает дату следующего повторения в формате
+// "YYYYMMDD" или ошибку, если входные данные некорректны.
 func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 	if len(repeat) == 0 {
 		return "", errors.New("правило повторения не указано")
@@ -246,7 +272,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 	case 'd':
 		return DayRule(now, start, repeat)
 	case 'w':
-		return WeekRule(now, start, repeat)
+		return WeekRule(now, repeat)
 	case 'm':
 		return MonthRule(now, start, repeat)
 	case 'y':

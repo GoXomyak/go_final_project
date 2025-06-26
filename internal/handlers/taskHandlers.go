@@ -15,6 +15,11 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// Init настраивает маршрутизацию для веб-сервера. Функция регистрирует все необходимые
+// маршруты API и их обработчики, используя переданные параметры:
+// - маршрутизатор для регистрации endpoint'ов
+// - подключение к базе данных для работы с данными
+// - конфигурацию приложения для настройки обработчиков
 func Init(r chi.Router, db *sql.DB, cfg *config.Config) {
 	r.Get("/api/nextdate", nextDayHandler)
 	r.Post("/api/task", auth(addTaskHandler(db), cfg))
@@ -26,6 +31,9 @@ func Init(r chi.Router, db *sql.DB, cfg *config.Config) {
 	r.Post("/api/signin", authHandler(cfg))
 }
 
+// nextDayHandler обрабатывает запрос на вычисление следующей даты на основе правила повторения.
+// Извлекает параметры запроса 'date', 'now' и 'repeat' для выполнения расчета.
+// Возвращает следующую дату в формате "ГГГГММДД" или сообщение об ошибке при неверных входных данных.
 func nextDayHandler(w http.ResponseWriter, r *http.Request) {
 	originalDate := r.URL.Query().Get("date")
 	nowTemp := r.URL.Query().Get("now")
@@ -48,18 +56,21 @@ func nextDayHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("ошибка отправки ответа клиенту: %v", err)
 	}
 }
+
+// addTaskHandler обрабатывает создание новой задачи путём декодирования запроса,
+// проверки входных данных и взаимодействия с базой данных.
 func addTaskHandler(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req dto.TaskRequest
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			utils.RespondeJsonError(w, http.StatusBadRequest, err)
+			utils.RespondJsonError(w, http.StatusBadRequest, err)
 			return
 		}
 
 		reqValid, err := utils.TaskValidator(req)
 		if err != nil {
-			utils.RespondeJsonError(w, http.StatusBadRequest, err)
+			utils.RespondJsonError(w, http.StatusBadRequest, err)
 			return
 		}
 		task := dto.Task{
@@ -70,42 +81,48 @@ func addTaskHandler(database *sql.DB) http.HandlerFunc {
 		}
 		result, err := db.AddTask(task.Date, task.Title, task.Comment, task.Repeat, database)
 		if err != nil {
-			utils.RespondeJsonError(w, http.StatusBadRequest, "Ошибка вставки данных в дб"+err.Error())
+			utils.RespondJsonError(w, http.StatusBadRequest, "Ошибка вставки данных в дб"+err.Error())
 			return
 		}
 		id, err := result.LastInsertId()
 		idStr := strconv.FormatInt(id, 10)
 		if err != nil {
-			utils.RespondeJsonError(w, http.StatusBadRequest, "Ошибка получения id из бд: "+err.Error())
+			utils.RespondJsonError(w, http.StatusBadRequest, "Ошибка получения id из бд: "+err.Error())
 			return
 		}
-		utils.RespondeJson(w, http.StatusOK, dto.TaskResponse{ID: idStr})
+		utils.RespondJson(w, http.StatusOK, dto.TaskResponse{ID: idStr})
 	}
 }
 
+// getTasksHandler обрабатывает HTTP GET запросы для получения списка задач из базы данных на основе параметров поиска.
+// Поддерживает фильтрацию по поисковым запросам или датам.
+// При успешном выполнении возвращает JSON-объект со списком задач, в случае ошибки - сообщение об ошибке.
 func getTasksHandler(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		search := r.URL.Query().Get("search")
 		tasks, err := db.GetTasks(database, search, 20)
 		if err != nil {
-			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			utils.RespondJsonError(w, http.StatusInternalServerError, err)
 			return
 		}
-		utils.RespondeJson(w, http.StatusOK, map[string]any{"tasks": tasks})
+		utils.RespondJson(w, http.StatusOK, map[string]any{"tasks": tasks})
 	}
 }
 
+// updateTaskHandler обрабатывает HTTP-запросы на обновление существующей задачи в базе данных планировщика.
+// Выполняет валидацию входных данных, проверяет существование задачи и обновляет базу данных.
+// Отвечает соответствующим кодом состояния и сообщением в зависимости от успеха или неудачи операции.
 func updateTaskHandler(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var taskReq dto.Task
 		err := json.NewDecoder(r.Body).Decode(&taskReq)
 		if err != nil {
-			utils.RespondeJsonError(w, http.StatusBadRequest, err)
+			utils.RespondJsonError(w, http.StatusBadRequest, err)
 			return
 		}
 		err = db.TaskExists(database, taskReq.ID)
 		if err != nil {
-			utils.RespondeJsonError(w, http.StatusBadRequest, err)
+			utils.RespondJsonError(w, http.StatusBadRequest, err)
 			return
 		}
 		req := dto.TaskRequest{
@@ -116,7 +133,7 @@ func updateTaskHandler(database *sql.DB) http.HandlerFunc {
 		}
 		taskValid, err := utils.TaskValidator(req)
 		if err != nil {
-			utils.RespondeJsonError(w, http.StatusBadRequest, err)
+			utils.RespondJsonError(w, http.StatusBadRequest, err)
 			return
 		}
 		task := dto.Task{
@@ -128,44 +145,48 @@ func updateTaskHandler(database *sql.DB) http.HandlerFunc {
 		}
 		err = db.UpdateTask(database, task)
 		if err != nil {
-			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			utils.RespondJsonError(w, http.StatusInternalServerError, err)
 			return
 		}
-		utils.RespondeJson(w, http.StatusOK, new(dto.Task))
+		utils.RespondJson(w, http.StatusOK, new(dto.Task))
 	}
 
 }
 
+// getTaskHandler обрабатывает GET-запросы для получения одиночной задачи по ID из базы данных
+// и возвращает её в виде JSON-ответа.
 func getTaskHandler(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		task, err := db.GetTask(r, database)
 		if err != nil {
-			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			utils.RespondJsonError(w, http.StatusInternalServerError, err)
 			return
 		}
-		utils.RespondeJson(w, http.StatusOK, task)
+		utils.RespondJson(w, http.StatusOK, task)
 	}
 }
 
+// taskDoneHandler обрабатывает задачу как выполненную и обрабатывает последующую логику
+// на основе правила повторения задачи.
 func taskDoneHandler(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		task, err := db.GetTask(r, database)
 		if err != nil {
-			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			utils.RespondJsonError(w, http.StatusInternalServerError, err)
 			return
 		}
 		if task.Repeat == "" {
 			err = db.DeleteTask(database, task.ID)
 			if err != nil {
-				utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+				utils.RespondJsonError(w, http.StatusInternalServerError, err)
 				return
 			}
-			utils.RespondeJson(w, http.StatusOK, dto.Empty{})
+			utils.RespondJson(w, http.StatusOK, dto.Empty{})
 			return
 		}
 		newDate, err := utils.NextDate(time.Now(), task.Date, task.Repeat)
 		if err != nil {
-			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			utils.RespondJsonError(w, http.StatusInternalServerError, err)
 			return
 		}
 		task = dto.Task{
@@ -177,25 +198,27 @@ func taskDoneHandler(database *sql.DB) http.HandlerFunc {
 		}
 		err = db.UpdateTask(database, task)
 		if err != nil {
-			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			utils.RespondJsonError(w, http.StatusInternalServerError, err)
 			return
 		}
-		utils.RespondeJson(w, http.StatusOK, dto.Empty{})
+		utils.RespondJson(w, http.StatusOK, dto.Empty{})
 	}
 }
 
+// deleteTaskHandler обрабатывает HTTP DELETE запросы на удаление задачи из базы данных по её ID.
+// Находит задачу, удаляет её и отправляет соответствующий статус и JSON-ответ.
 func deleteTaskHandler(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		task, err := db.GetTask(r, database)
 		if err != nil {
-			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			utils.RespondJsonError(w, http.StatusInternalServerError, err)
 			return
 		}
 		err = db.DeleteTask(database, task.ID)
 		if err != nil {
-			utils.RespondeJsonError(w, http.StatusInternalServerError, err)
+			utils.RespondJsonError(w, http.StatusInternalServerError, err)
 			return
 		}
-		utils.RespondeJson(w, http.StatusOK, dto.Empty{})
+		utils.RespondJson(w, http.StatusOK, dto.Empty{})
 	}
 }

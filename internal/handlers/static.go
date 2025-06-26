@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 )
 
+// StaticHandler возвращает HTTP-обработчик для раздачи статических файлов из настроенной веб-директории.
+// Если запрашиваемый файл не существует, возвращает файл "index.html" в качестве запасного варианта.
 func StaticHandler(cfg *config.Config) http.HandlerFunc {
 	// Возвращает обработчик для статических файлов
 	fs := http.FileServer(http.Dir(cfg.WebDir))

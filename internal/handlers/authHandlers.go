@@ -1,3 +1,17 @@
+// Package handlers содержит обработчики HTTP-запросов для веб-сервиса управления задачами.
+//
+// Пакет предоставляет функциональность для:
+//   - Обработки REST API запросов
+//   - Валидации входящих данных
+//   - Формирования HTTP-ответов
+//   - Управления аутентификацией и авторизацией
+//
+// Основные компоненты:
+//   - Обработка CRUD операций для задач
+//   - Работа с повторяющимися задачами
+//   - Поиск и фильтрация задач
+//   - Управление статусами задач
+
 package handlers
 
 import (
@@ -12,21 +26,22 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// authHandler обрабатывает аутентификацию пользователя, проверяя учетные данные и генерируя токен JWT, если аутентификация прошла успешно.
 func authHandler(cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var cred dto.Credentials
 		err := json.NewDecoder(r.Body).Decode(&cred)
 		if err != nil {
-			utils.RespondeJsonError(w, http.StatusBadRequest, errors.New("ошибка декодирования json"))
+			utils.RespondJsonError(w, http.StatusBadRequest, errors.New("ошибка декодирования json"))
 			return
 		}
 		if cfg.Password == "" {
-			utils.RespondeJsonError(w, http.StatusBadRequest, "пароль для входа не установлен")
+			utils.RespondJsonError(w, http.StatusBadRequest, "пароль для входа не установлен")
 			return
 		}
 
 		if cred.Password != cfg.Password {
-			utils.RespondeJsonError(w, http.StatusUnauthorized, errors.New("неверный пароль"))
+			utils.RespondJsonError(w, http.StatusUnauthorized, errors.New("неверный пароль"))
 			return
 		}
 		expirationTime := time.Now().Add(time.Hour * 24)
@@ -38,13 +53,17 @@ func authHandler(cfg *config.Config) http.HandlerFunc {
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 		tokenString, err := token.SignedString([]byte(cfg.SecretJWT))
 		if err != nil {
-			utils.RespondeJsonError(w, http.StatusInternalServerError, errors.New("невозможно создать токен"))
+			utils.RespondJsonError(w, http.StatusInternalServerError, errors.New("невозможно создать токен"))
 			return
 		}
-		utils.RespondeJson(w, http.StatusOK, dto.Token{AccessToken: tokenString})
+		utils.RespondJson(w, http.StatusOK, dto.Token{AccessToken: tokenString})
 	}
 }
 
+// auth является промежуточной функцией (middleware), которая обеспечивает аутентификацию для защищенных маршрутов.
+// Проверяет JWT токен, предоставленный в cookie "token", используя заданную конфигурацию.
+// Если токен недействителен или отсутствует, возвращает ответ HTTP 401 Unauthorized.
+// В случае успешной аутентификации вызывает следующий обработчик в цепочке.
 func auth(next http.HandlerFunc, cfg *config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if len(cfg.Password) > 0 {
@@ -52,16 +71,16 @@ func auth(next http.HandlerFunc, cfg *config.Config) http.HandlerFunc {
 			cookie, err := r.Cookie("token")
 			if err != nil {
 				if errors.Is(err, http.ErrNoCookie) {
-					utils.RespondeJsonError(w, http.StatusUnauthorized, errors.New("пользователь не авторизован"))
+					utils.RespondJsonError(w, http.StatusUnauthorized, errors.New("пользователь не авторизован"))
 					return
 				}
-				utils.RespondeJsonError(w, http.StatusUnauthorized, errors.New("ошибка получения cookie"))
+				utils.RespondJsonError(w, http.StatusUnauthorized, errors.New("ошибка получения cookie"))
 				return
 			}
 			jwtString = cookie.Value
 			ok, err := validateJWT(jwtString, cfg)
 			if !ok {
-				utils.RespondeJsonError(w, http.StatusUnauthorized, err)
+				utils.RespondJsonError(w, http.StatusUnauthorized, err)
 				return
 			}
 			next(w, r)
@@ -69,6 +88,8 @@ func auth(next http.HandlerFunc, cfg *config.Config) http.HandlerFunc {
 	}
 }
 
+// validateJWT проверяет строку JSON Web Token (JWT) используя предоставленную конфигурацию
+// и возвращает результат проверки и возможную ошибку.
 func validateJWT(jwtString string, cfg *config.Config) (bool, error) {
 	claims := &dto.Claims{}
 	token, err := jwt.ParseWithClaims(jwtString, claims, func(token *jwt.Token) (interface{}, error) {

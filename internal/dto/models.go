@@ -1,3 +1,4 @@
+// Package dto содержит модели для работы с http запросами и генерации jwt токенов
 package dto
 
 import "github.com/golang-jwt/jwt/v5"

@@ -6,7 +6,9 @@ import (
 	"net/http"
 )
 
-func RespondeJson(w http.ResponseWriter, status int, data any) {
+// RespondJson отправляет JSON-ответ с указанным кодом состояния и данными,
+// устанавливая соответствующие заголовки ответа.
+func RespondJson(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	err := json.NewEncoder(w).Encode(data)
@@ -16,7 +18,9 @@ func RespondeJson(w http.ResponseWriter, status int, data any) {
 
 }
 
-func RespondeJsonError(w http.ResponseWriter, status int, err any) {
+// RespondJsonError отправляет JSON-ответ с сообщением об ошибке и HTTP-кодом состояния.
+// Принимает ошибку любого типа.
+func RespondJsonError(w http.ResponseWriter, status int, err any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	var errStr string
