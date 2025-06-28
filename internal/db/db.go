@@ -51,14 +51,14 @@ func CheckAndCreate(dbPath string) error {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		createErr := os.MkdirAll(dir, 0755)
 		if createErr != nil {
-			return fmt.Errorf("Ошибка создания директоррии: %s\n", createErr)
+			return fmt.Errorf("ошибка создания директории: %w", createErr)
 		}
 	}
 
 	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
 		file, createErr := os.Create(dbPath)
 		if createErr != nil {
-			return fmt.Errorf("Ошибка создания файла: %s\n", createErr)
+			return fmt.Errorf("ошибка создания файла: %w", createErr)
 		}
 		defer func() {
 			if err = file.Close(); err != nil {
@@ -108,23 +108,31 @@ func Connect(cfg *config.Config) (*sql.DB, error) {
 func initSchema(db *sql.DB, schemaPath string) error {
 	schemaBytes, err := os.ReadFile(schemaPath)
 	if err != nil {
-		return fmt.Errorf("Не удалось прочитать schema: %s\n", err)
+		return fmt.Errorf("не удалось прочитать schema: %w", err)
 	}
 	_, err = db.Exec(string(schemaBytes))
 	if err != nil {
-		return fmt.Errorf("Не удалось создать schema: %s\n", err)
+		return fmt.Errorf("не удалось создать schema: %w", err)
 	}
 	return nil
 }
 
 // AddTask вставляет новую задачу в таблицу scheduler с указанной датой, заголовком, комментарием и правилом повторения.
-// Возвращает результат выполнения SQL и любую обнаруженную ошибку.
-func AddTask(date, title, comment, repeat string, db *sql.DB) (sql.Result, error) {
-	return db.Exec("INSERT INTO scheduler (date, title, comment, repeat) VALUES (:date, :title, :comment, :repeat)",
+// Возвращает результат ID новой задачи и любую обнаруженную ошибку.
+func AddTask(date, title, comment, repeat string, db *sql.DB) (int64, error) {
+	result, err := db.Exec("INSERT INTO scheduler (date, title, comment, repeat) VALUES (:date, :title, :comment, :repeat)",
 		sql.Named("date", date),
 		sql.Named("title", title),
 		sql.Named("comment", comment),
 		sql.Named("repeat", repeat))
+	if err != nil {
+		return 0, err
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 // GetTasks извлекает задачи из базы данных на основе предоставленного поискового запроса и лимита.
@@ -152,7 +160,7 @@ LIMIT :limit`, sql.Named("pattern", pattern), sql.Named("limit", limit))
 	}
 
 	if err != nil {
-		return []dto.Task{}, errors.New("Ошибка получения задач из базы данных: " + err.Error())
+		return []dto.Task{}, fmt.Errorf("Ошибка получения задач из базы данных: %w ", err)
 	}
 	defer func() {
 		if err = rows.Close(); err != nil {
@@ -163,12 +171,12 @@ LIMIT :limit`, sql.Named("pattern", pattern), sql.Named("limit", limit))
 	for rows.Next() {
 		var task dto.Task
 		if err = rows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat); err != nil {
-			return []dto.Task{}, errors.New("Ошибка сканирования задачи: " + err.Error())
+			return []dto.Task{}, fmt.Errorf("ошибка сканирования задачи: %w", err)
 		}
 		tasks = append(tasks, task)
 	}
 	if err = rows.Err(); err != nil {
-		return []dto.Task{}, errors.New("Ошибка сканирования задачи: " + err.Error())
+		return []dto.Task{}, fmt.Errorf("ошибка сканирования задачи: %w", err)
 	}
 
 	return tasks, nil
@@ -184,7 +192,7 @@ func TaskExists(db *sql.DB, id string) error {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("задача с таким ID не найдена")
 		}
-		return errors.New("Ошибка чтения бд: " + err.Error())
+		return fmt.Errorf("ошибка чтения бд: %w", err)
 	}
 
 	return nil
@@ -196,7 +204,7 @@ func UpdateTask(db *sql.DB, task dto.Task) error {
 SET date = :date, title = :title, comment = :comment, repeat = :repeat
 WHERE id = :id`, sql.Named("id", task.ID), sql.Named("date", task.Date), sql.Named("title", task.Title), sql.Named("comment", task.Comment), sql.Named("repeat", task.Repeat))
 	if err != nil {
-		return errors.New("ошибка обновления бд" + err.Error())
+		return fmt.Errorf("ошибка обновления бд: %w", err)
 	}
 	return nil
 }
@@ -220,7 +228,7 @@ func GetTask(r *http.Request, database *sql.DB) (dto.Task, error) {
 	row := database.QueryRow(`SELECT * FROM scheduler WHERE id = :id`, sql.Named("id", id))
 	err = row.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
 	if err != nil {
-		return dto.Task{}, errors.New("ошибка получения задачи из бд: " + err.Error())
+		return dto.Task{}, fmt.Errorf("ошибка получения задачи из бд: %w", err)
 	}
 	return task, nil
 }
@@ -229,7 +237,7 @@ func GetTask(r *http.Request, database *sql.DB) (dto.Task, error) {
 func DeleteTask(db *sql.DB, id string) error {
 	_, err := db.Exec("DELETE FROM scheduler WHERE id = :id", sql.Named("id", id))
 	if err != nil {
-		return errors.New("Ошибка удаления задачи из бд: " + err.Error())
+		return fmt.Errorf("ошибка удаления задачи из бд: %w", err)
 	}
 	return nil
 }

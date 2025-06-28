@@ -9,7 +9,6 @@ import (
 	"go_final_project/internal/dto"
 	"go_final_project/internal/utils"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -79,18 +78,16 @@ func addTaskHandler(database *sql.DB) http.HandlerFunc {
 			Comment: reqValid.Comment,
 			Repeat:  reqValid.Repeat,
 		}
-		result, err := db.AddTask(task.Date, task.Title, task.Comment, task.Repeat, database)
+		id, err := db.AddTask(task.Date, task.Title, task.Comment, task.Repeat, database)
 		if err != nil {
-			utils.RespondJsonError(w, http.StatusBadRequest, "Ошибка вставки данных в дб"+err.Error())
+			utils.RespondJsonError(w, http.StatusInternalServerError, "Ошибка вставки данных в дб"+err.Error())
 			return
 		}
-		id, err := result.LastInsertId()
-		idStr := strconv.FormatInt(id, 10)
 		if err != nil {
 			utils.RespondJsonError(w, http.StatusBadRequest, "Ошибка получения id из бд: "+err.Error())
 			return
 		}
-		utils.RespondJson(w, http.StatusOK, dto.TaskResponse{ID: idStr})
+		utils.RespondJson(w, http.StatusOK, dto.TaskResponse{ID: id})
 	}
 }
 

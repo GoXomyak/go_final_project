@@ -11,7 +11,7 @@ type TaskRequest struct {
 }
 
 type TaskResponse struct {
-	ID string `json:"id"`
+	ID int64 `json:"id"`
 }
 
 type Task struct {
