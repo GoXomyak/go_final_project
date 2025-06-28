@@ -24,6 +24,15 @@ jobs:
     - name: Install dependencies
       run: go mod tidy
 
+    - name: Create .env for CI
+      run: |
+        echo "TODO_PORT=7540" >> .env
+        echo "WEB_DIR=./web" >> .env
+        echo "TODO_DBFILE=./internal/data/scheduler.db" >> .env
+        echo "TODO_SCHEMA_PATH=./internal/db/schema.sql" >> .env
+        echo "TODO_PASSWORD=myPassword" >> .env
+        echo "TODO_JWT_SECRET=lineForSignature" >> .env
+
     - name: Run local server
       run: |
         CGO_ENABLED=0 GOOS=linux go run main.go &
